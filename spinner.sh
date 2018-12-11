@@ -89,7 +89,7 @@ function start_spinner {
     for (( i = 1; i <= $(printf "${1}" | expand | wc -m ); i++ )); do
         ctr=$(( $ctr + 1 ))
     done
-    _spinner "start" "${1}" ${ctr} &
+    _spinner "start" "${1}" "${ctr}" &
     # set global spinner pid
     _sp_pid=$!
     disown
@@ -99,8 +99,8 @@ function stop_spinner {
     # $1 : command exit status
     # $2 : msg to display when done
     # $3 : msg to dispaly when failed
-    
-    _spinner "stop" ${1} ${_sp_pid} ${ctr} ${2:-DONE} ${3:-FAILED}
+
+    _spinner "stop" "${1}" "${_sp_pid}" "${ctr}" "${2:-DONE}" "${3:-FAILED}"
     unset _sp_pid
 }
 
