@@ -1,5 +1,7 @@
 #!/bin/bash
 
+trap "clean_stdin; reveal_stdin" SIGINT SIGTERM EXIT
+
 # Author: Tasos Latsas
 # Modified: Andy <cih9088@gmail.com>
 
@@ -20,6 +22,20 @@
 #
 # Also see: test.sh
 
+function hide_stdin() {
+    stty -echo
+    # if [ -t 0 ]; then
+    #    stty -echo -icanon time 0 min 0
+    # fi
+}
+
+function reveal_stdin() {
+    stty echo
+}
+
+function clean_stdin() {
+    while read -e -t 0.1; do : ; done
+}
 
 function _spinner() {
     # $1 start/stop
@@ -60,12 +76,9 @@ function _spinner() {
             local msg_done=$5
             local msg_failed=$6
 
-            if [[ -z ${pid} ]]; then
-                printf "spinner is not running..\n"
-                exit 1
+            if [[ ! -z ${pid} ]]; then
+                kill ${pid} > /dev/null 2>&1
             fi
-
-            kill ${pid} > /dev/null 2>&1
 
             # inform the user uppon success or failure
             if [[ ${exit_status} -eq 0 ]]; then
@@ -92,6 +105,7 @@ function start_spinner {
     _spinner "start" "${1}" "${ctr}" &
     # set global spinner pid
     _sp_pid=$!
+    hide_stdin
     disown
 }
 
@@ -101,6 +115,8 @@ function stop_spinner {
     # $3 : msg to dispaly when failed
 
     _spinner "stop" "${1}" "${_sp_pid}" "${ctr}" "${2:-DONE}" "${3:-FAILED}"
+    clean_stdin
+    reveal_stdin
     unset _sp_pid
 }
 
