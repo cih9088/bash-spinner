@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # Author: Tasos Latsas
+# Modified: Andy <cih9088@gmail.com>
 
 # spinner.sh
 #
@@ -12,10 +13,10 @@
 # usage:
 #   1. source this script in your's
 #   2. start the spinner:
-#       start_spinner [display-message-here]
+#       start_spinner [message]
 #   3. run your command
 #   4. stop the spinner:
-#       stop_spinner [your command's exit status]
+#       stop_spinner [command's exit status] [meessage when success] [message when failed]
 #
 # Also see: test.sh
 
@@ -24,23 +25,22 @@ function _spinner() {
     # $1 start/stop
     #
     # on start: $2 display message
+    #           $3 message length
     # on stop : $2 process exit status
     #           $3 spinner function pid (supplied from stop_spinner)
+    #           $4 message length
+    #           $5 message done
+    #           $6 message failed
 
-    local on_success="DONE"
-    local on_fail="FAIL"
-    local white="\e[1;37m"
-    local green="\e[1;32m"
-    local red="\e[1;31m"
-    local nc="\e[0m"
+    local IGreen='[0;92m'
+    local IRed='[0;91m'
+    local IYellow='[0;93m'
+    local Color_Off='[0m'
 
     case $1 in
         start)
-            # calculate the column where spinner and status msg will be displayed
-            let column=$(tput cols)-${#2}-8
-            # display message and position the cursor in $column column
-            printf ${2}
-            printf "%${column}s"
+            local msg=$2
+            local ctr=$3
 
             # start spinner
             i=1
@@ -49,29 +49,34 @@ function _spinner() {
 
             while :
             do
-                printf "\b${sp:$((i++%${#sp})):1}"
+                printf "\033[2K\033[${ctr}D${IYellow}[${sp:$((i++%${#sp})):1}]${Color_Off} ${msg}"
                 sleep $delay
             done
             ;;
         stop)
-            if [[ -z ${3} ]]; then
-                printf "spinner is not running.."
+            local exit_status=$2
+            local pid=$3
+            local ctr=$4
+            local msg_done=$5
+            local msg_failed=$6
+
+            if [[ -z ${pid} ]]; then
+                printf "spinner is not running..\n"
                 exit 1
             fi
 
-            kill $3 > /dev/null 2>&1
+            kill ${pid} > /dev/null 2>&1
 
             # inform the user uppon success or failure
-            printf "\b["
-            if [[ $2 -eq 0 ]]; then
-                printf "${green}${on_success}${nc}"
+            if [[ ${exit_status} -eq 0 ]]; then
+                printf "\033[2K\033[${ctr}D${IGreen}[*]${Color_Off} ${msg_done}\n"
             else
-                printf "${red}${on_fail}${nc}"
+                printf "\033[2K\033[${ctr}D${IRed}[!]${Color_Off} ${msg_failed}\n"
+                exit ${exit_status}
             fi
-            printf "]\n"
             ;;
         *)
-            printf "invalid argument, try {start/stop}"
+            printf "invalid argument, try {start/stop}\n"
             exit 1
             ;;
     esac
@@ -79,7 +84,12 @@ function _spinner() {
 
 function start_spinner {
     # $1 : msg to display
-    _spinner "start" "${1}" &
+    # count mesg length
+    ctr=4
+    for (( i = 1; i <= $(printf "${1}" | expand | wc -m ); i++ )); do
+        ctr=$(( $ctr + 1 ))
+    done
+    _spinner "start" "${1}" ${ctr} &
     # set global spinner pid
     _sp_pid=$!
     disown
@@ -87,7 +97,10 @@ function start_spinner {
 
 function stop_spinner {
     # $1 : command exit status
-    _spinner "stop" $1 $_sp_pid
+    # $2 : msg to display when done
+    # $3 : msg to dispaly when failed
+    
+    _spinner "stop" ${1} ${_sp_pid} ${ctr} ${2:-DONE} ${3:-FAILED}
     unset _sp_pid
 }
 
