@@ -35,7 +35,8 @@ function reveal_stdin() {
 
 function clean_stdin() {
     # while read -e -t 0.1; do : ; done
-    while read -e -t 1; do : ; done
+    # while read -e -t 1; do : ; done
+    while read -r -t 0; do read -r; done
 }
 
 function _spinner() {
